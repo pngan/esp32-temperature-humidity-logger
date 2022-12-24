@@ -6,16 +6,14 @@
 // battery recharges
 //
 // Ref: based on   http://educ8s.tv/esp32-deep-sleep-tutorial 
-
+#include <stdio.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include "localwifi.h" // Do not check this file into git
 
-const String url = "https://eo4avu3kqpzqnl3.m.pipedream.net";
-
 #define uS_TO_S_FACTOR 1000000LL  /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP  5LL        /* Time ESP32 will go to sleep (in seconds) */
-
+#define PIN_INPUT_VOLTAGE_HALF 35
 
 void setup(){
   Serial.begin(115200);
@@ -36,7 +34,11 @@ void setup(){
 
 
   http.addHeader("Content-Type", "application/json");
-  int httpResponseCode = http.POST("{\n\"sensor\":\"gps\",\n\"time\":1351824120,\n\"data\":[\n48.756080,\n2.302038\n]\n}");
+
+  int batteryVoltage = analogRead(PIN_INPUT_VOLTAGE_HALF) * 2;
+  char json[256];
+  sprintf(json, "{\n\"loc\":\"home\",\n\"bat\":%d", batteryVoltage);
+  int httpResponseCode = http.POST(json);
   
   if (httpResponseCode > 0) {
     Serial.print("HTTP ");
