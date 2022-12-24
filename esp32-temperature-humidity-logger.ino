@@ -7,34 +7,49 @@
 //
 // Ref: based on   http://educ8s.tv/esp32-deep-sleep-tutorial 
 
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include "localwifi.h" // Do not check this file into git
+
+const String url = "https://eo4avu3kqpzqnl3.m.pipedream.net";
 
 #define uS_TO_S_FACTOR 1000000LL  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  3LL        /* Time ESP32 will go to sleep (in seconds) */
+#define TIME_TO_SLEEP  5LL        /* Time ESP32 will go to sleep (in seconds) */
 
-RTC_DATA_ATTR int bootCount = 0;
-
-int GREEN_LED_PIN = 25;
-int YELLOW_LED_PIN = 26;
 
 void setup(){
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
 
-  pinMode(GREEN_LED_PIN,OUTPUT);
-  pinMode(YELLOW_LED_PIN,OUTPUT);
-  delay(500);
-  
-  if(bootCount == 0) //Run this only the first time
-  {
-      digitalWrite(YELLOW_LED_PIN,HIGH);
-      bootCount = bootCount+1;
-  }else
-  {
-      digitalWrite(GREEN_LED_PIN,HIGH);
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
   }
-  
-  delay(3000);
 
-  digitalWrite(GREEN_LED_PIN,LOW);
-  digitalWrite(YELLOW_LED_PIN,LOW);
+  Serial.print("OK! IP=");
+  Serial.println(WiFi.localIP());
+
+  Serial.print("Posting " + url + "... ");
+  HTTPClient http;
+  http.begin(url);
+
+
+  http.addHeader("Content-Type", "application/json");
+  int httpResponseCode = http.POST("{\n\"sensor\":\"gps\",\n\"time\":1351824120,\n\"data\":[\n48.756080,\n2.302038\n]\n}");
+  
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP ");
+    Serial.println(httpResponseCode);
+    String payload = http.getString();
+    Serial.println();
+    Serial.println(payload);
+  }
+  else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+    Serial.println(":-(");
+  }
 
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
   esp_deep_sleep_start();
